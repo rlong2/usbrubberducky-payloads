@@ -2,6 +2,11 @@
 
 This repository contains payloads and extensions for the Hak5 USB Rubber Ducky. Community developed payloads are listed and developers are encouraged to create pull requests to make changes to or submit new payloads.
 
+# Flipper Zero Functionality
+
+The [Flipper Zero](https://docs.flipperzero.one/ "Flipper Zero") has a Bad USB function, but it can only accept .txt files that are in a single directory.
+This repo will restructure the file hierarchy so all payloads exist in a single directory.
+
 ## About the USB Rubber Ducky
 
 A "flash drive" that types keystroke injection payloads into unsuspecting computers at incredible speeds.
